@@ -8,26 +8,23 @@ from database import engine
 from auth import verify_token
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
+from fastapi.responses import JSONResponse
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-origins = [ #No fim, alterar origins para somente o ip que irá fazer a requisição
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-    "*", 
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+origins = [ #No fim, alterar origins para somente o ip que irá fazer a requisição
+    "http://localhost:3000",
+]
 
 #------
 #USER ENDPOINTS
@@ -53,7 +50,9 @@ def login_for_access_token(db: Session = Depends(get_db), form_data: OAuth2Passw
     access_token = auth.create_access_token(
         data={"sub": user.login}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    response = JSONResponse(content={"access_token": access_token, "token_type": "bearer"})
+    response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
+    return response
 
 @app.get("/verify-token/{token}", tags=["Authentication"])
 async def verify_user_token(token: str):
@@ -83,6 +82,15 @@ def read_client(cpf: str, db: Session = Depends(get_db), current_user: schemas.U
 
     client = crud.get_client(db, cpf=cpf)
 
+    if client is None:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    return client
+
+@app.get("/client/", response_model=schemas.ClientRead, tags=["Client"])
+def read_client(name: str, db: Session = Depends(get_db), current_user: schemas.UsersRead = Depends(get_current_user)):
+    client = crud.get_client_by_name(db, name=name)
+    
     if client is None:
         raise HTTPException(status_code=404, detail="Client not found")
 

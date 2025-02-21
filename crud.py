@@ -28,6 +28,9 @@ def create_client(db: Session, client: schemas.ClientCreate):
 def get_client(db:Session, cpf: str):
     return db.query(models.Clients).filter(models.Clients.cpf == cpf).first()
 
+def get_client_by_name(db:Session, name: str):
+    return db.query(models.Clients).filter(models.Clients.name == name).first()
+
 def get_client_by_id(db: Session, client_id: int):
     return db.query(models.Clients).filter(models.Clients.id_client == client_id).first()
 
